@@ -1,0 +1,3 @@
+C:/programming/CSE-406-Computer-Security/Offline - 1/code/cmake-build-debug/CMakeFiles/code.dir
+C:/programming/CSE-406-Computer-Security/Offline - 1/code/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/programming/CSE-406-Computer-Security/Offline - 1/code/cmake-build-debug/CMakeFiles/rebuild_cache.dir
