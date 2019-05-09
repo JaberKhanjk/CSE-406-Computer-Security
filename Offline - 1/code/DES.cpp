@@ -9,31 +9,19 @@ typedef unsigned long long int ull;
 #define nl printf("\n")
 #define N 64
 #define N2 56
-#define inf 1e8
-
-#define sf(n) scanf("%d", &n)
-#define sff(n, m) scanf("%d%d",&n,&m)
-#define sfl(n) scanf("%I64d", &n)
-#define sffl(n, m) scanf("%I64d%I64d",&n,&m)
-
-#define pf(n) printf("%d",n)
-#define pff(n, m) printf("%d %d",n,m)
-#define pffl(n, m) printf("%I64d %I64d",n,m)
-#define pfl(n) printf("%I64d",n)
-#define pfs(s) printf("%s",s)
 
 #define pb push_back
-#define pp pair<int, int>
 
 using namespace std;
 
 //===================================================================
 // variables
 //===================================================================
-ll key56;
+bitset<56> key56;
+bitset<N> bset;
+
 string key, plain_text, ciphered_text;
 vector<string> text_chunks;
-vector<ll> ciphered_chunks;
 
 int PI[N] = {58, 50, 42, 34, 26, 18, 10, 2,
              60, 52, 44, 36, 28, 20, 12, 4,
@@ -83,6 +71,11 @@ int PI_1[N] = {40, 8, 48, 16, 56, 24, 64, 32,
                34, 2, 42, 10, 50, 18, 58, 26,
                33, 1, 41, 9, 49, 17, 57, 25};
 
+int P[32] = {16, 7, 20, 21, 29, 12, 28, 17,
+           1, 15, 23, 26, 5, 18, 31, 10,
+           2, 8, 24, 14, 32, 27, 3, 9,
+           19, 13, 30, 6, 22, 11, 4, 25};
+
 int SHIFT[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
 //===================================================================
@@ -91,7 +84,7 @@ int SHIFT[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 void make64Bits() {
   int req = 8 - (plain_text.length() % 8);
   while (req--)
-    plain_text.pb('#');
+    plain_text.pb('0');
 }
 
 void groupPlainText() {
@@ -99,164 +92,136 @@ void groupPlainText() {
   string s = "";
 
   for (int i = 0; i < n; i++) {
+    s.pb(plain_text[i]);
+
     if ((i + 1) % 8 == 0)
       text_chunks.pb(s), s = "";
-    else
-      s.pb(plain_text[i]);
   }
 }
 
-void groupCipheredText(ll x) {
-  string str = "";
-
-  int p = 1, k = 0;
-  for (int i = 1; i <= N; i++) {
-    if(x & (1 << (i-1)))
-      k += p;
-
-    p *= 2;
-    if(i % 8 == 0)
-    {
-      str.pb(char(k));
-      p=1, k=0;
-    }
-  }
-
-  reverse(str.begin(), str.end());
-  ciphered_text += str;
-}
-
-ll strToLL(string s) {
-  ll x = 0, p = 1;
-  int n = s.length(), k;
+void strToBitset(string s) {
+  bset.reset();
+  int n = s.length(), k, p = 0;
 
   for (int i = n - 1; i >= 0; i--) {
     k = int(s[i]);
 
-    //convert k into 8-bit binary and add to 'x'
-    for (int j = 0; j < n; j++) {
-      //the bit is 1
-      if (k & (1 << j))
-        x += p;
+    while (k) {
+      if (k % 2)
+        bset[p] = 1;
 
-      p *= 2;
+      p++, k /= 2;
     }
-  }
 
-  return x;
+    while (p % 8)
+      p++;
+  }
 }
 
 void make56BitKey() {
-  ll key64 = strToLL(key), p = 1;
+  strToBitset(key);
 
-  key56 = 0;
   for (int i = 0; i < N2; i++) {
-    if (key64 & (1 << (CP_1[i] - 1)))
-      key56 += p;
-
-    p *= 2;
+    key56[i] = bset[CP_1[i] - 1];
   }
-}
-
-//creates mask to extract from ath to bth bit
-ll createMask(ll a, ll b) {
-  ll ret = 0;
-  for (ll i = a; i <= b; i++)
-    ret |= 1 << i;
-
-  return ret;
 }
 
 //===================================================================
 // encryption functions
 //===================================================================
 void encrypt(string s) {
-  ll original_data = strToLL(s), transposed_data = 0, p = 1;
+  bitset<N> transposed_data;
+  strToBitset(s);
 
   //transpose data
-  for (int i = 0; i < N; i++) {
-    if (original_data << (PI[i] - 1))
-      transposed_data += p;
-
-    p *= 2;
-  }
+  for (int i = 0; i < N; i++)
+    transposed_data[i] = bset[PI[i] - 1];
 
   //L, R for the first iteration
-  ll kL, kR;
-  ll backup_key56 = key56, key56_2, stage_key, e;
-  ll oldL, oldR, newL, newR;
+  bitset<28> kL, kR;
+  bitset<56> key56_2;
+  bitset<32> oldL, oldR, newL, newR;
 
-  oldL = createMask(33, 64) & transposed_data;
-  oldR = createMask(1, 32) & transposed_data;
+  for (int i = 0; i < 32; i++)
+    oldR[i] = transposed_data[i], oldL[i] = transposed_data[i + 32];
+
+  for (int i = 0; i < 56; i++)
+    key56_2[i] = key56[i];
 
   for (int i = 0; i < 16; i++) {
-    newL = oldR;
+    for (int j = 0; j < 32; j++)
+      newL[j] = oldR[j];
 
+    //---------------------------------------------------------------
+    //keys at each round
     //divide the 56-bit key into two parts
-    kL = key56 & createMask(29, 56);
-    kR = key56 & createMask(1, 28);
+    for (int j = 0; j < 28; j++)
+      kR[j] = key56_2[j], kL[j] = key56_2[j + 28];
 
     //shift the two parts(each of 28bits)
-    //as we have 64 bits in the variable, we can't just trivially shift
-    //shifting x bits means x bits from MSB will be left out
-    kL = (kL & createMask(1, 28 - SHIFT[i])) << SHIFT[i];
-    kR = (kR & createMask(1, 28 - SHIFT[i])) << SHIFT[i];
+    kR <<= SHIFT[i];
+    kL <<= SHIFT[i];
 
-    key56_2 = (kL << 28) | kR;
+    //using the 28bits make 56bit again
+    for (int j = 0; j < 28; j++)
+      key56_2[j] = kR[j];
+
+    for (int j = 28; j < 56; j++)
+      key56_2[j] = kL[j - 28];
 
     //transpose key for the current round
-    stage_key = 0, p = 1;
-    for (int j = 0; j < 48; j++) {
-      if (key56_2 << (CP_2[j] - 1))
-        stage_key += p;
+    bitset<48> current_round_key;
+    for (int j = 0; j < 48; j++)
+      current_round_key[j] = key56_2[CP_2[j] - 1];
+    //---------------------------------------------------------------
 
-      p *= 2;
-    }
-
+    //---------------------------------------------------------------
     //function at each iteration
-    p = 1, e = 0;
-    for (int j = 0; j < 48; j++) {
-      if (oldR << (E[j] - 1))
-        e += p;
+    bitset<48> e;
+    for (int j = 0; j < 48; j++)
+      e[j] = oldR[E[j] - 1];
+
+    //xor of key and e
+    for (int j = 0; j < 48; j++)
+      e[j] = e[j] ^ current_round_key[j];
+
+    for (int j = 0; j < 32; j++)
+      newR[j] = e[PI_2[j] - 1] ^ oldL[j];
+    //---------------------------------------------------------------
+
+    for (int j = 0; j < 32; j++)
+      oldL[j] = newL[j], oldR[j] = newL[j];
+  }
+
+  bitset<N> res;
+  for (int j = 0; j < 32; j++)
+    res[j] = oldR[j];
+
+  for (int j = 32; j < N; j++)
+    res[j] = oldL[j - 28];
+
+  //transpose
+  bitset<N> ret;
+  for (int i = 0; i < N; i++)
+    ret[i] = res[PI_1[i] - 1];
+
+  int p = 0, sum = 0;
+  string str = "";
+
+  for (int i = 0; i < N; i += 8) {
+    sum = 0, p = 1;
+    for (int j = i; j < i + 8; j++) {
+      if (ret[j])
+        sum += p;
 
       p *= 2;
     }
 
-    ll temp = e ^stage_key;
-
-    //make 32-bits
-    p = 1, newR = 0;
-    for (int j = 0; j < 32; j++) {
-      if (temp << (PI_2[j] - 1))
-        e += p;
-
-      p *= 2;
-    }
-
-    //xor with old L
-    newR = newR ^ oldL;
-
-    oldL = newL;
-    oldR = newR;
+    str.pb(char(sum));
   }
 
-  key56 = backup_key56;
-
-  //swap the left-most 32bits and right-most 32bits
-  ll res = oldL | (oldR << 32);
-
-  //use PI_1 to transpose again
-  ll ret = 0;
-
-  p = 1;
-  for (int i = 0; i < N; i++) {
-    if (res << (PI_1[i] - 1))
-      ret += p;
-
-    p *= 2;
-  }
-
-  ciphered_chunks.pb(ret);
+  reverse(str.begin(), str.end());
+  ciphered_text += str;
 }
 
 int main() {
@@ -273,14 +238,13 @@ int main() {
   make56BitKey();
   groupPlainText();
 
+  ciphered_text = "";
   for (string s : text_chunks)
     encrypt(s);
-
-  ciphered_text = "";
-  for (ll e : ciphered_chunks)
-    groupCipheredText(e);
 
   cout << ciphered_text;
 
   return 0;
 }
+
+// http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
