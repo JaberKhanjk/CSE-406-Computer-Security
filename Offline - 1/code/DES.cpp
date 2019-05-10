@@ -17,10 +17,10 @@ using namespace std;
 //===================================================================
 // variables
 //===================================================================
-bitset<56> key56;
-bitset<N> bset;
-
-string key, plain_text, ciphered_text;
+string keys[17];
+string tempR, current_round_key, e;
+string oldL, oldR, newL, newR;
+string key, plain_text, ciphered_text, deciphered_text;
 vector<string> text_chunks;
 
 int PI[N] = {58, 50, 42, 34, 26, 18, 10, 2,
@@ -72,146 +72,82 @@ int PI_1[N] = {40, 8, 48, 16, 56, 24, 64, 32,
                33, 1, 41, 9, 49, 17, 57, 25};
 
 int P[32] = {16, 7, 20, 21, 29, 12, 28, 17,
-           1, 15, 23, 26, 5, 18, 31, 10,
-           2, 8, 24, 14, 32, 27, 3, 9,
-           19, 13, 30, 6, 22, 11, 4, 25};
+             1, 15, 23, 26, 5, 18, 31, 10,
+             2, 8, 24, 14, 32, 27, 3, 9,
+             19, 13, 30, 6, 22, 11, 4, 25};
 
 int SHIFT[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
 //===================================================================
 // helper functions
 //===================================================================
-void make64Bits() {
-  int req = 8 - (plain_text.length() % 8);
-  while (req--)
-    plain_text.pb('0');
+void init() {
+  oldL.resize(32), oldR.resize(32);
+  newL.resize(32), newR.resize(32);
+  current_round_key.resize(48), e.resize(48), tempR.resize(32);
 }
 
-void groupPlainText() {
-  int n = plain_text.length();
+string make64Bits(string s) {
+
+  string str = s;
+  while (str.length() % 8 != 0)
+    str.pb('~');
+
+  return str;
+}
+
+void group64BitText(string str) {
+  text_chunks.clear();
+
+  int n = str.length();
   string s = "";
 
   for (int i = 0; i < n; i++) {
-    s.pb(plain_text[i]);
+    s.pb(str[i]);
 
     if ((i + 1) % 8 == 0)
       text_chunks.pb(s), s = "";
   }
 }
 
-void strToBitset(string s) {
-  bset.reset();
-  int n = s.length(), k, p = 0;
+string to8BitBinary(int n) {
+  string s = "";
+  while (n) {
+    if(n % 2)
+      s.pb('1');
+    else
+      s.pb('0');
 
-  for (int i = n - 1; i >= 0; i--) {
-    k = int(s[i]);
-
-    while (k) {
-      if (k % 2)
-        bset[p] = 1;
-
-      p++, k /= 2;
-    }
-
-    while (p % 8)
-      p++;
+    n /= 2;
   }
+
+  while (s.length() < 8)
+    s.pb('0');
+
+  reverse(s.begin(), s.end());
+  return s;
 }
 
-void make56BitKey() {
-  strToBitset(key);
+string strToBit(string s) {
+  string bset;
+  int n = s.length(), k;
 
-  for (int i = 0; i < N2; i++) {
-    key56[i] = bset[CP_1[i] - 1];
+  for (int i = 0; i < n; i++) {
+    k = int(s[i]) - 48;
+    bset += to8BitBinary(k);
   }
+
+  return bset;
 }
 
-//===================================================================
-// encryption functions
-//===================================================================
-void encrypt(string s) {
-  bitset<N> transposed_data;
-  strToBitset(s);
-
-  //transpose data
-  for (int i = 0; i < N; i++)
-    transposed_data[i] = bset[PI[i] - 1];
-
-  //L, R for the first iteration
-  bitset<28> kL, kR;
-  bitset<56> key56_2;
-  bitset<32> oldL, oldR, newL, newR;
-
-  for (int i = 0; i < 32; i++)
-    oldR[i] = transposed_data[i], oldL[i] = transposed_data[i + 32];
-
-  for (int i = 0; i < 56; i++)
-    key56_2[i] = key56[i];
-
-  for (int i = 0; i < 16; i++) {
-    for (int j = 0; j < 32; j++)
-      newL[j] = oldR[j];
-
-    //---------------------------------------------------------------
-    //keys at each round
-    //divide the 56-bit key into two parts
-    for (int j = 0; j < 28; j++)
-      kR[j] = key56_2[j], kL[j] = key56_2[j + 28];
-
-    //shift the two parts(each of 28bits)
-    kR <<= SHIFT[i];
-    kL <<= SHIFT[i];
-
-    //using the 28bits make 56bit again
-    for (int j = 0; j < 28; j++)
-      key56_2[j] = kR[j];
-
-    for (int j = 28; j < 56; j++)
-      key56_2[j] = kL[j - 28];
-
-    //transpose key for the current round
-    bitset<48> current_round_key;
-    for (int j = 0; j < 48; j++)
-      current_round_key[j] = key56_2[CP_2[j] - 1];
-    //---------------------------------------------------------------
-
-    //---------------------------------------------------------------
-    //function at each iteration
-    bitset<48> e;
-    for (int j = 0; j < 48; j++)
-      e[j] = oldR[E[j] - 1];
-
-    //xor of key and e
-    for (int j = 0; j < 48; j++)
-      e[j] = e[j] ^ current_round_key[j];
-
-    for (int j = 0; j < 32; j++)
-      newR[j] = e[PI_2[j] - 1] ^ oldL[j];
-    //---------------------------------------------------------------
-
-    for (int j = 0; j < 32; j++)
-      oldL[j] = newL[j], oldR[j] = newL[j];
-  }
-
-  bitset<N> res;
-  for (int j = 0; j < 32; j++)
-    res[j] = oldR[j];
-
-  for (int j = 32; j < N; j++)
-    res[j] = oldL[j - 28];
-
-  //transpose
-  bitset<N> ret;
-  for (int i = 0; i < N; i++)
-    ret[i] = res[PI_1[i] - 1];
-
-  int p = 0, sum = 0;
+string bitToStr(string b) {
+  int p, sum;
   string str = "";
 
-  for (int i = 0; i < N; i += 8) {
+  for (int i = 64 - 1; i >= 0; i -= 8) {
     sum = 0, p = 1;
-    for (int j = i; j < i + 8; j++) {
-      if (ret[j])
+    for (int j = i; j > i - 8; j--) {
+      if (b[j] == '1')
         sum += p;
 
       p *= 2;
@@ -221,30 +157,220 @@ void encrypt(string s) {
   }
 
   reverse(str.begin(), str.end());
+  return str;
+}
+
+void make56BitKey() {
+  string bset = strToBit(key);
+
+  for (int i = 0; i < N2; i++) {
+    keys[0].pb(bset[CP_1[i] - 1]);
+  }
+}
+
+//===================================================================
+// encryption-decryption functions
+//===================================================================
+
+void generateKeys() {
+  bitset<28> kL, kR;
+
+  //divide the 56-bit key into two parts
+  int k = 27;
+  for (int i = 0; i < 28; i++)
+    kL[k--] = keys[0][i] - 48;
+
+  k = 27;
+  for (int i = 28; i < 56; i++)
+    kR[k--] = keys[0][i] - 48;
+
+  for (int i = 1; i <= 16; i++) {
+    //circular shift the two parts(each of 28bits)
+    kR = (kR << SHIFT[i - 1]) | (kR >> (28 - SHIFT[i - 1]));
+    kL = (kL << SHIFT[i - 1]) | (kL >> (28 - SHIFT[i - 1]));
+
+    //using the 28bits make 56bit again
+    for (int j = 28 - 1; j >= 0; j--){
+      if(kL[j])
+        keys[i].pb('1');
+      else
+        keys[i].pb('0');
+    }
+
+    for (int j = 28 - 1; j >= 0; j--){
+      if(kR[j])
+        keys[i].pb('1');
+      else
+        keys[i].pb('0');
+    }
+  }
+}
+
+void encrypt(string s) {
+  string original = strToBit(s);
+
+  string transposed_data;
+  transposed_data.resize(64);
+
+  //transpose data
+  for (int i = 0; i < 64; i++)
+    transposed_data[i] = original[PI[i] - 1];
+
+  //L, R for the first iteration
+  for (int i = 0; i < 32; i++)
+    oldL[i] = transposed_data[i], oldR[i] = transposed_data[i + 32];
+
+  for (int i = 1; i <= 16; i++) {
+    for (int j = 0; j < 32; j++)
+      newL[j] = oldR[j];
+
+    //---------------------------------------------------------------
+    //keys at each round
+    //transpose key for the current round
+    for (int j = 0; j < 48; j++)
+      current_round_key[j] = keys[i][CP_2[j] - 1];
+    //---------------------------------------------------------------
+
+    //---------------------------------------------------------------
+    //using expansion array we expand from 32-bits to 48bits
+    for (int j = 0; j < 48; j++)
+      e[j] = oldR[E[j] - 1];
+
+    //xor of key and e
+    for (int j = 0; j < 48; j++)
+      e[j] = char(((e[j] - 48) ^ (current_round_key[j] - 48)) + 48);
+
+    //transpose
+    for (int j = 0; j < 32; j++)
+      tempR[j] = e[PI_2[j] - 1];
+
+    //p-box
+    for (int j = 0; j < 32; j++)
+      newR[j] = char(((tempR[P[j] - 1] - 48) ^ (oldL[j] - 48)) + 48);
+
+    //---------------------------------------------------------------
+
+    for (int j = 0; j < 32; j++)
+      oldL[j] = newL[j], oldR[j] = newR[j];
+  }
+
+  string res;
+  for (int j = 0; j < 32; j++)
+    res.pb(oldR[j]);
+
+  for (int j = 32; j < N; j++)
+    res.pb(oldR[j - 28]);
+
+  //transpose
+  string ret;
+  for (int i = 0; i < N; i++)
+    ret.pb(res[PI_1[i] - 1]);
+
+  string str = bitToStr(ret);
   ciphered_text += str;
+}
+
+void decrypt(string s) {
+  string original = strToBit(s);
+
+  string transposed_data;
+  transposed_data.resize(64);
+
+  //transpose data
+  for (int i = 0; i < 64; i++)
+    transposed_data[i] = original[PI[i] - 1];
+
+  //L, R for the first iteration
+  for (int i = 0; i < 32; i++)
+    oldL[i] = transposed_data[i], oldR[i] = transposed_data[i + 32];
+
+  for (int i = 16; i > 0; i--) {
+    for (int j = 0; j < 32; j++)
+      newL[j] = oldR[j];
+
+    //---------------------------------------------------------------
+    //keys at each round
+    //transpose key for the current round
+    for (int j = 0; j < 48; j++)
+      current_round_key[j] = keys[i][CP_2[j] - 1];
+    //---------------------------------------------------------------
+
+    //---------------------------------------------------------------
+    //using expansion array we expand from 32-bits to 48bits
+    for (int j = 0; j < 48; j++)
+      e[j] = oldR[E[j] - 1];
+
+    //xor of key and e
+    for (int j = 0; j < 48; j++)
+      e[j] = char(((e[j] - 48) ^ (current_round_key[j] - 48)) + 48);
+
+    //transpose
+    for (int j = 0; j < 32; j++)
+      tempR[j] = e[PI_2[j] - 1];
+
+    //p-box
+    for (int j = 0; j < 32; j++)
+      newR[j] = char(((tempR[P[j] - 1] - 48) ^ (oldL[j] - 48)) + 48);
+
+    //---------------------------------------------------------------
+
+    for (int j = 0; j < 32; j++)
+      oldL[j] = newL[j], oldR[j] = newR[j];
+  }
+
+  string res;
+  for (int j = 0; j < 32; j++)
+    res.pb(oldR[j]);
+
+  for (int j = 32; j < N; j++)
+    res.pb(oldR[j - 28]);
+
+  //transpose
+  string ret;
+  for (int i = 0; i < N; i++)
+    ret.pb(res[PI_1[i] - 1]);
+
+  string str = bitToStr(ret);
+  deciphered_text += str;
 }
 
 int main() {
   freopen("in.txt", "r", stdin);
 
-  int i, j, k;
-  int n, m;
-
   cin >> key;
   getline(cin, plain_text);
   getline(cin, plain_text);
 
-  make64Bits();
+  init();
   make56BitKey();
-  groupPlainText();
+  generateKeys();
+
+  //---------------------------------------------
+  //encryption
+  plain_text = make64Bits(plain_text);
+  group64BitText(plain_text);
 
   ciphered_text = "";
   for (string s : text_chunks)
     encrypt(s);
 
-  cout << ciphered_text;
+  cout << "ciphered : " << ciphered_text << endl;
+  //---------------------------------------------
+
+  //---------------------------------------------
+  //decryption
+  ciphered_text = make64Bits(ciphered_text);
+  group64BitText(ciphered_text);
+
+  deciphered_text = "";
+  for (string s : text_chunks)
+    decrypt(s);
+
+  cout << "deciphered : " << deciphered_text;
+  //---------------------------------------------
 
   return 0;
 }
+
 
 // http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
