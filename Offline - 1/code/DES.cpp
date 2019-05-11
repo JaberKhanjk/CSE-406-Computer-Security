@@ -17,6 +17,7 @@ using namespace std;
 //===================================================================
 // variables
 //===================================================================
+vector<string> vec;
 string keys[17];
 string tempR, current_round_key, e, tempKey;
 string oldL, oldR, newL, newR;
@@ -113,7 +114,7 @@ void group64BitText(string str) {
 string to8BitBinary(int n) {
   string s = "";
   while (n) {
-    if(n % 2)
+    if (n % 2)
       s.pb('1');
     else
       s.pb('0');
@@ -192,27 +193,24 @@ void generateKeys() {
 
     //using the 28bits make 56bit again
     tempKey.clear();
-    for (int j = 28 - 1; j >= 0; j--){
-      if(kL[j])
+    for (int j = 28 - 1; j >= 0; j--) {
+      if (kL[j])
         tempKey.pb('1');
       else
         tempKey.pb('0');
     }
 
-    for (int j = 28 - 1; j >= 0; j--){
-      if(kR[j])
+    for (int j = 28 - 1; j >= 0; j--) {
+      if (kR[j])
         tempKey.pb('1');
       else
         tempKey.pb('0');
     }
 
     //transform
-    for(int j = 0; j < 48; j++)
+    for (int j = 0; j < 48; j++)
       keys[i].pb(tempKey[CP_2[j] - 1]);
   }
-
-  for(int i = 1; i<=16;i++)
-    cout<<keys[i]<<endl;
 }
 
 void encrypt(string s) {
@@ -230,14 +228,13 @@ void encrypt(string s) {
     oldL[i] = transposed_data[i], oldR[i] = transposed_data[i + 32];
 
   for (int i = 1; i <= 16; i++) {
-    for (int j = 0; j < 32; j++)
-      newL[j] = oldR[j];
+    newL = oldR;
 
     //---------------------------------------------------------------
     //keys at each round
     //transpose key for the current round
     for (int j = 0; j < 48; j++)
-      current_round_key[j] = keys[i][CP_2[j] - 1];
+      current_round_key[j] = keys[i][j];
     //---------------------------------------------------------------
 
     //---------------------------------------------------------------
@@ -246,8 +243,8 @@ void encrypt(string s) {
       e[j] = oldR[E[j] - 1];
 
     //xor of key and e
-    for (int j = 0; j < 48; j++){
-      if((e[j]-48)^(current_round_key[j]-48))
+    for (int j = 0; j < 48; j++) {
+      if ((e[j] - 48) ^ (current_round_key[j] - 48))
         e[j] = '1';
       else
         e[j] = '0';
@@ -258,9 +255,9 @@ void encrypt(string s) {
       tempR[j] = e[PI_2[j] - 1];
 
     //p-box
-    for (int j = 0; j < 32; j++){
-      int k = (tempR[P[j] - 1] - 48) ^ (oldL[j] - 48);
-      if(k)
+    for (int j = 0; j < 32; j++) {
+      int k = (tempR[P[j] - 1] - 48) ^(oldL[j] - 48);
+      if (k)
         newR[j] = '1';
       else
         newR[j] = '0';
@@ -268,8 +265,7 @@ void encrypt(string s) {
 
     //---------------------------------------------------------------
 
-    for (int j = 0; j < 32; j++)
-      oldL[j] = newL[j], oldR[j] = newR[j];
+    oldL = newL,oldR = newR;
   }
 
   string res;
@@ -277,20 +273,22 @@ void encrypt(string s) {
     res.pb(oldR[j]);
 
   for (int j = 0; j < 32; j++)
-    res.pb(oldR[j]);
+    res.pb(oldL[j]);
 
   //transpose
   string ret;
-  for (int i = 0; i < N; i++)
-    ret.pb(res[PI_1[i] - 1]);
-
+  for (int j = 0; j < N; j++)
+    ret.pb(res[PI_1[j] - 1]);
+vec.pb(ret);
   string str = bitToStr(ret);
   ciphered_text += str;
 }
 
+int idx = 0;
+
 void decrypt(string s) {
   string original = strToBit(s);
-
+ original = vec[idx++];
   string transposed_data;
   transposed_data.resize(64);
 
@@ -303,14 +301,13 @@ void decrypt(string s) {
     oldL[i] = transposed_data[i], oldR[i] = transposed_data[i + 32];
 
   for (int i = 16; i > 0; i--) {
-    for (int j = 0; j < 32; j++)
-      newL[j] = oldR[j];
+    newL = oldR;
 
     //---------------------------------------------------------------
     //keys at each round
     //transpose key for the current round
     for (int j = 0; j < 48; j++)
-      current_round_key[j] = keys[i][CP_2[j] - 1];
+      current_round_key[j] = keys[i][j];
     //---------------------------------------------------------------
 
     //---------------------------------------------------------------
@@ -319,21 +316,29 @@ void decrypt(string s) {
       e[j] = oldR[E[j] - 1];
 
     //xor of key and e
-    for (int j = 0; j < 48; j++)
-      e[j] = char(((e[j] - 48) ^ (current_round_key[j] - 48)) + 48);
+    for (int j = 0; j < 48; j++) {
+      if ((e[j] - 48) ^ (current_round_key[j] - 48))
+        e[j] = '1';
+      else
+        e[j] = '0';
+    }
 
     //transpose
     for (int j = 0; j < 32; j++)
       tempR[j] = e[PI_2[j] - 1];
 
     //p-box
-    for (int j = 0; j < 32; j++)
-      newR[j] = char(((tempR[P[j] - 1] - 48) ^ (oldL[j] - 48)) + 48);
+    for (int j = 0; j < 32; j++) {
+      int k = (tempR[P[j] - 1] - 48) ^(oldL[j] - 48);
+      if (k)
+        newR[j] = '1';
+      else
+        newR[j] = '0';
+    }
 
     //---------------------------------------------------------------
 
-    for (int j = 0; j < 32; j++)
-      oldL[j] = newL[j], oldR[j] = newR[j];
+    oldL = newL,oldR = newR;
   }
 
   string res;
@@ -345,8 +350,8 @@ void decrypt(string s) {
 
   //transpose
   string ret;
-  for (int i = 0; i < N; i++)
-    ret.pb(res[PI_1[i] - 1]);
+  for (int j = 0; j < N; j++)
+    ret.pb(res[PI_1[j] - 1]);
 
   string str = bitToStr(ret);
   deciphered_text += str;
@@ -354,6 +359,7 @@ void decrypt(string s) {
 
 int main() {
   freopen("in.txt", "r", stdin);
+  //freopen("out.txt", "w", stdout);
 
   cin >> key;
   getline(cin, plain_text);
