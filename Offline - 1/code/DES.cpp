@@ -17,7 +17,7 @@ using namespace std;
 //===================================================================
 // variables
 //===================================================================
-vector<string> vec;
+
 string keys[17];
 string tempR, current_round_key, e, tempKey;
 string oldL, oldR, newL, newR;
@@ -132,9 +132,11 @@ string to8BitBinary(int n) {
 string strToBit(string s) {
   string bset;
   int n = s.length(), k;
+  unsigned char ch;
 
   for (int i = 0; i < n; i++) {
-    k = s[i];
+    ch = s[i];
+    k = ch;
     bset += to8BitBinary(k);
   }
 
@@ -265,7 +267,7 @@ void encrypt(string s) {
 
     //---------------------------------------------------------------
 
-    oldL = newL,oldR = newR;
+    oldL = newL, oldR = newR;
   }
 
   string res;
@@ -279,8 +281,9 @@ void encrypt(string s) {
   string ret;
   for (int j = 0; j < N; j++)
     ret.pb(res[PI_1[j] - 1]);
-vec.pb(ret);
+
   string str = bitToStr(ret);
+
   ciphered_text += str;
 }
 
@@ -288,8 +291,8 @@ int idx = 0;
 
 void decrypt(string s) {
   string original = strToBit(s);
- original = vec[idx++];
   string transposed_data;
+
   transposed_data.resize(64);
 
   //transpose data
@@ -338,7 +341,7 @@ void decrypt(string s) {
 
     //---------------------------------------------------------------
 
-    oldL = newL,oldR = newR;
+    oldL = newL, oldR = newR;
   }
 
   string res;
