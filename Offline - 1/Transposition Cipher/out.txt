@@ -1,0 +1,6 @@
+plain text provided: NMOLBCTFIPOTONBMTTTTEARMODHESWLOIKUVEHSITVXCWHULESAGTTWODINAACFIXARWSSLAHEWACRAEWREYTLDRNOIVTSDOEIANWSIKEYNNIAMXEOILNANESEWSWEAKIIILNSRETHTN
+key length : 5
+ordering of key : (2, 5, 1, 3, 4)
+deciphered text :
+sendtwomilliondollarinbankaccountfivefivesixthepasswordistwotwosevensixablackmanwithwhitesuitwilltakenecessaryarrangementtowithdrawthemoneyx
+accuracy : 100.0%

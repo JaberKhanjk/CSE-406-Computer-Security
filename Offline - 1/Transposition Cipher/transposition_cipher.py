@@ -97,11 +97,12 @@ for x in div:
 if mx == 0:
     out_file.write("nothing matched")
 else:
-    out_file.write(str(mx) + " hints matched out of " + str(len(hints)) + "hints\n")
-    out_file.write("key length : " + str(len(ordering))+"\n")
-    out_file.write("ordering of key : " + str(ordering)+"\n")
+    out_file.write("plain text provided: " + ciphered + "\n")
+    # out_file.write(str(mx) + " hints matched out of " + str(len(hints)) + "hints\n")
+    out_file.write("key length : " + str(len(ordering)) + "\n")
+    out_file.write("ordering of key : " + str(ordering) + "\n")
     out_file.write("deciphered text :\n")
-    out_file.write(str(deciphered)+"\n")
+    out_file.write(str(deciphered) + "\n")
 
     c = len(ordering)
     r = len(deciphered) // c
@@ -113,14 +114,19 @@ else:
             mat[i][j] = deciphered[k]
             k += 1
 
+    ordering2 = [0] * len(ordering)
+    for i in range(len(ordering)):
+        ordering2[ordering[i] - 1] = i
+
     temp = ""
     for i in range(c):
         for j in range(r):
-            temp += mat[j][i]
+            temp += mat[j][ordering2[i]]
 
     cnt = 0
+    temp = temp.upper()
     for i in range(len(ciphered)):
         if ciphered[i] == temp[i]:
             cnt += 1
-    acc = (len(ciphered) - cnt) / len(ciphered)
-    out_file.write("accuracy : " + str(acc * 100) + "%")
+
+    out_file.write("accuracy : " + str(cnt) + " letters matched")
