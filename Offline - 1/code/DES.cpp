@@ -362,7 +362,7 @@ void decrypt(string s) {
 
 int main() {
   freopen("in.txt", "r", stdin);
-  //freopen("out.txt", "w", stdout);
+  freopen("out.txt", "w", stdout);
 
   cin >> key;
   getline(cin, plain_text);
