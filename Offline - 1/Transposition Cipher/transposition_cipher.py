@@ -56,11 +56,16 @@ input_text = open("in.txt", "r")
 out_file = open("out.txt", "w")
 
 ciphered = input_text.readline()
+
+#for the empty line
+input_text.readline()
+
 hints = input_text.readline().split()
 
 if ciphered[len(ciphered) - 1] == '\n':
     ciphered = ciphered[:len(ciphered) - 1]
 
+# remove the commas
 for i in range(len(hints) - 1):
     hints[i] = hints[i][:len(hints[i]) - 1]
 
